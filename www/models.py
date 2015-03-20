@@ -13,7 +13,7 @@ from transwarp.db import next_id
 from transwarp.orm import Model, StringField, BooleanField, FloatField, TextField
 
 class User(Model):
-    __table__ = 'user'
+    __table__ = 'users'
 
     id = StringField(primary_key=True, default=next_id, ddl='varchar(50)')
     email = StringField(updatable=False, ddl='varchar(50)')

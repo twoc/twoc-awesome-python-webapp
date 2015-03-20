@@ -8,7 +8,10 @@ Database operation module. This module is independent with web module.
 '''
 
 import time, logging
-import db
+if __name__=='__main__':
+    import db
+else:
+    from . import db
 
 class Field(object):
     _count = 0;
