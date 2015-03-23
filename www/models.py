@@ -45,3 +45,13 @@ class Comment(Model):
     user_image = StringField(ddl='varchar(500)')
     content = TextField()
     created_at = FloatField(updatable=False, default=time.time)
+
+if __name__=='__main__':
+    # a sample for create table
+    import logging
+    print(User().__sql__())
+    logging.basicConfig(level=logging.DEBUG)
+    db.create_engine(user='root', password='7780105', database='awesome',
+            host='127.0.0.1', port=3306)
+    db.update('drop table if exists user')
+    db.update(User().__sql__())
