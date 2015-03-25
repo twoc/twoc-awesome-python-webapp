@@ -553,7 +553,7 @@ class Request(object):
     def _parse_input(self):
         def _convert(item):
             if isinstance(item, list):
-                return item
+                return [i.value for i in item]
             if item.filename:
                 return MultipartFile(item)
             return item.value
@@ -576,8 +576,8 @@ class Request(object):
         Get input parameter value. If the specified key has multiple value, the first one is returned.
         If the specified key is not exist, then raise KeyError.
 
-        >>> from io import StringIO
-        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':StringIO('a=1&b=M%20M&c=ABC&c=XYZ&e=')})
+        >>> from io import BytesIO
+        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r['a']
         '1'
         >>> r['c']
@@ -589,7 +589,7 @@ class Request(object):
         >>> b = '----WebKitFormBoundaryQQ3J8kPsjFpTmqNz'
         >>> pl = ['--%s' % b, 'Content-Disposition: form-data; name=\\"name\\"\\n', 'Scofield', '--%s' % b, 'Content-Disposition: form-data; name=\\"name\\"\\n', 'Lincoln', '--%s' % b, 'Content-Disposition: form-data; name=\\"file\\"; filename=\\"test.txt\\"', 'Content-Type: text/plain\\n', 'just a test', '--%s' % b, 'Content-Disposition: form-data; name=\\"id\\"\\n', '4008009001', '--%s--' % b, '']
         >>> payload = '\\n'.join(pl)
-        >>> r = Request({'REQUEST_METHOD':'POST', 'CONTENT_LENGTH':str(len(payload)), 'CONTENT_TYPE':'multipart/form-data; boundary=%s' % b, 'wsgi.input':StringIO(payload)})
+        >>> r = Request({'REQUEST_METHOD':'POST', 'CONTENT_LENGTH':str(len(payload)), 'CONTENT_TYPE':'multipart/form-data; boundary=%s' % b, 'wsgi.input':BytesIO(payload.encode())})
         >>> r.get('name')
         'Scofield'
         >>> r.gets('name')
@@ -609,8 +609,8 @@ class Request(object):
         '''
         The same as request[key], but return default value if key is not found.
 
-        >>> from io import StringIO
-        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':StringIO('a=1&b=M%20M&c=ABC&c=XYZ&e=')})
+        >>> from io import BytesIO
+        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r.get('a')
         '1'
         >>> r.get('empty')
@@ -626,8 +626,8 @@ class Request(object):
         '''
         Get multiple values for specified key.
 
-        >>> from io import StringIO
-        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':StringIO('a=1&b=M%20M&c=ABC&c=XYZ&e=')})
+        >>> from io import BytesIO
+        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r.gets('a')
         ['1']
         >>> r.gets('c')
@@ -649,8 +649,8 @@ class Request(object):
         i = ctx.request.input(role='guest')
         i.role ==> 'guest'
 
-        >>> from io import StringIO
-        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':StringIO('a=1&b=M%20M&c=ABC&c=XYZ&e=')})
+        >>> from io import BytesIO
+        >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> i = r.input(x=2008)
         >>> i.a
         '1'
@@ -777,7 +777,7 @@ class Request(object):
             for k, v in self._environ.items():
                 if k.startswith('HTTP_'):
                     # convert 'HTTP_ACCEPT_ENCODING' to 'ACCEPT-ENCODING'
-                    hdrs[k[5:].replace('_', '-').upper()] = v.decode('utf-8')
+                    hdrs[k[5:].replace('_', '-').upper()] = v
             self._headers = hdrs
         return self._headers
 
@@ -825,7 +825,7 @@ class Request(object):
                 for c in cookie_str.split(';'):
                     pos = c.find('=')
                     if pos>0:
-                        cookies[c[:pos].strip()] = _unquote(c[pos+1:])
+                        cookies[c[:pos].strip()] = urllib.parse.unquote(c[pos+1:])
             self._cookies = cookies
         return self._cookies
 
@@ -1182,7 +1182,7 @@ class Jinja2TemplateEngine(TemplateEngine):
         self._env.filters[name] = fn_filter
 
     def __call__(self, path, model):
-        return self._env.get_template(path).render(**model).encode('utf-8')
+        return self._env.get_template(path).render(**model)
 
 def _default_error_handler(e, start_response, is_debug):
     if isinstance(e, HttpError):
