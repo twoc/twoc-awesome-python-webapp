@@ -561,6 +561,7 @@ class Request(object):
         inputs = dict()
         for key in fs:
             inputs[key] = _convert(fs[key])
+        inputs['_cgi.FieldStorage'] = fs #http://bugs.python.org/issue18394#msg207958 
         return inputs
 
     def _get_raw_input(self):
@@ -597,9 +598,10 @@ class Request(object):
         >>> f = r.get('file')
         >>> f.filename
         'test.txt'
-        >>> f.file.read()
+        >>> f.file.read().decode()
         'just a test'
         '''
+        
         r = self._get_raw_input()[key]
         if isinstance(r, list):
             return r[0]
@@ -792,7 +794,7 @@ class Request(object):
         'text/html'
         >>> H['USER-AGENT']
         'Mozilla/5.0'
-        >>> L = H.items()
+        >>> L = list(H.items())
         >>> L.sort()
         >>> L
         [('ACCEPT', 'text/html'), ('USER-AGENT', 'Mozilla/5.0')]
@@ -879,7 +881,7 @@ class Response(object):
         '''
         L = [(_RESPONSE_HEADER_DICT.get(k, k), v) for k, v in self._headers.items()]
         if hasattr(self, '_cookies'):
-            for v in self._cookies.itervalues():
+            for v in self._cookies.values():
                 L.append(('Set-Cookie', v))
         L.append(_HEADER_X_POWERED_BY)
         return L
@@ -1025,7 +1027,7 @@ class Response(object):
             self._cookies = {}
         L = ['%s=%s' % (urllib.parse.quote(name), urllib.parse.quote(value))]
         if expires is not None:
-            if isinstance(expires, (float, int, long)):
+            if isinstance(expires, (float, int)):
                 L.append('Expires=%s' % datetime.datetime.fromtimestamp(expires, UTC_0).strftime('%a, %d-%b-%Y %H:%M:%S GMT'))
             if isinstance(expires, (datetime.date, datetime.datetime)):
                 L.append('Expires=%s' % expires.astimezone(UTC_0).strftime('%a, %d-%b-%Y %H:%M:%S GMT'))
@@ -1266,26 +1268,26 @@ def _build_interceptor_chain(last_fn, *interceptors):
     Build interceptor chain.
 
     >>> def target():
-    ...     print 'target'
+    ...     print('target')
     ...     return 123
     >>> @interceptor('/')
     ... def f1(next):
-    ...     print 'before f1()'
+    ...     print('before f1()')
     ...     return next()
     >>> @interceptor('/test/')
     ... def f2(next):
-    ...     print 'before f2()'
+    ...     print('before f2()')
     ...     try:
     ...         return next()
     ...     finally:
-    ...         print 'after f2()'
+    ...         print('after f2()')
     >>> @interceptor('/')
     ... def f3(next):
-    ...     print 'before f3()'
+    ...     print('before f3()')
     ...     try:
     ...         return next()
     ...     finally:
-    ...         print 'after f3()'
+    ...         print('after f3()')
     >>> chain = _build_interceptor_chain(target, f1, f2, f3)
     >>> ctx.request = Dict(path_info='/test/abc')
     >>> chain()
