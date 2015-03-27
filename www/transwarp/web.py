@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-
 '''
 A simple, lightweight, WSGI-compatible web framework.
 '''
 
 __author__ = 'cc'
+__version__ = '0.01-dev'
 
-import types, os, re, cgi, sys, time, datetime, functools, mimetypes, threading, logging, urllib, traceback
-#import re, datetime, threading
+import types, os, re, cgi, sys, time, datetime, functools, mimetypes, \
+        threading, logging, urllib, traceback
+from io import StringIO, BytesIO
 
 # thread local object for storing request and response:
 ctx = threading.local()
@@ -577,7 +578,6 @@ class Request(object):
         Get input parameter value. If the specified key has multiple value, the first one is returned.
         If the specified key is not exist, then raise KeyError.
 
-        >>> from io import BytesIO
         >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r['a']
         '1'
@@ -611,7 +611,6 @@ class Request(object):
         '''
         The same as request[key], but return default value if key is not found.
 
-        >>> from io import BytesIO
         >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r.get('a')
         '1'
@@ -628,7 +627,6 @@ class Request(object):
         '''
         Get multiple values for specified key.
 
-        >>> from io import BytesIO
         >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> r.gets('a')
         ['1']
@@ -651,7 +649,6 @@ class Request(object):
         i = ctx.request.input(role='guest')
         i.role ==> 'guest'
 
-        >>> from io import BytesIO
         >>> r = Request({'REQUEST_METHOD':'POST', 'wsgi.input':BytesIO(b'a=1&b=M%20M&c=ABC&c=XYZ&e=')})
         >>> i = r.input(x=2008)
         >>> i.a
@@ -1171,7 +1168,7 @@ class Jinja2TemplateEngine(TemplateEngine):
     >>> engine = Jinja2TemplateEngine(templ_path)
     >>> engine.add_filter('datetime', lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S'))
     >>> engine('jinja2-test.html', dict(name='Michael', posted_at=datetime.datetime(2014, 6, 1, 10, 11, 12)))
-    '<p>Hello, Michael.</p><span>2014-06-01 10:11:12</span>'
+    b'<p>Hello, Michael.</p><span>2014-06-01 10:11:12</span>'
     '''
 
     def __init__(self, templ_dir, **kw):
@@ -1184,7 +1181,7 @@ class Jinja2TemplateEngine(TemplateEngine):
         self._env.filters[name] = fn_filter
 
     def __call__(self, path, model):
-        return self._env.get_template(path).render(**model)
+        return self._env.get_template(path).render(**model).encode()
 
 def _default_error_handler(e, start_response, is_debug):
     if isinstance(e, HttpError):
@@ -1444,7 +1441,7 @@ class WSGIApplication(object):
             try:
                 r = fn_exec()
                 if isinstance(r, Template):
-                    r = self._template_engine(r.template_name, r.model)
+                    r = [self._template_engine(r.template_name, r.model)]
                 if r is None:
                     r = []
                 start_response(response.status, response.headers)
@@ -1455,12 +1452,12 @@ class WSGIApplication(object):
                 return []
             except HttpError as e:
                 start_response(e.status, response.headers)
-                return ['<html><body><h1>', e.status, '</h1></body></html>']
+                return ['<html><body><h1>'.encode(), e.status.encode(), '</h1></body></html>'.encode()]
             except Exception as e:
                 logging.exception(e)
                 if not debug:
                     start_response('500 Internal Server Error', [])
-                    return ['<html><body><h1>500 Internal Server Error</h1></body></html>']
+                    return ['<html><body><h1>500 Internal Server Error</h1></body></html>'.encode()]
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 fp = StringIO()
                 traceback.print_exception(exc_type, exc_value, exc_traceback, file=fp)
@@ -1468,9 +1465,9 @@ class WSGIApplication(object):
                 fp.close()
                 start_response('500 Internal Server Error', [])
                 return [
-                    r'''<html><body><h1>500 Internal Server Error</h1><div style="font-family:Monaco, Menlo, Consolas, 'Courier New', monospace;"><pre>''',
-                    stacks.replace('<', '&lt;').replace('>', '&gt;'),
-                    '</pre></div></body></html>']
+                    r'''<html><body><h1>500 Internal Server Error</h1><div style="font-family:Monaco, Menlo, Consolas, 'Courier New', monospace;"><pre>'''.encode(),
+                    stacks.replace('<', '&lt;').replace('>', '&gt;').encode(),
+                    '</pre></div></body></html>'.encode()]
             finally:
                 del ctx.application
                 del ctx.request

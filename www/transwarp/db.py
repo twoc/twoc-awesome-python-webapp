@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-__author__ = 'cc'
-
 '''
 Database operation module.
 '''
+
+__author__ = 'cc'
 
 import time, uuid, functools, threading, logging
 
