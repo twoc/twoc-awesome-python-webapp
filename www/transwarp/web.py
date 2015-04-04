@@ -1442,6 +1442,8 @@ class WSGIApplication(object):
                 r = fn_exec()
                 if isinstance(r, Template):
                     r = [self._template_engine(r.template_name, r.model)]
+                elif isinstance(r, str):
+                    r = [r.encode()]
                 if r is None:
                     r = []
                 start_response(response.status, response.headers)
